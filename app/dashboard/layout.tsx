@@ -21,11 +21,13 @@ export default async function DashboardLayout({
 
   return (
     <ReduxProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+      <div className="min-h-screen bg-[#f6f7fb] dark:bg-gray-950 transition-colors">
         <DashboardNavbar userEmail={user.email || ""} />
-        <div className="max-w-6xl mx-auto px-10 mt-10 pb-20">
+
+        {/* Page wrapper with max width + padding */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 pb-20">
           {children}
-        </div>
+        </main>
       </div>
     </ReduxProvider>
   );
