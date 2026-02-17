@@ -16,6 +16,8 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "pinned" | "favorite"
   >("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   const fetchBookmarks = useCallback(async () => {
     const { data, error } = await supabase
@@ -49,37 +51,53 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
   };
 
   const togglePinned = async (id: string, next: boolean) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("bookmarks")
       .update({ is_pinned: next })
       .eq("id", id)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("id, is_pinned")
+      .single();
 
     if (error) {
       console.error("Failed to toggle pinned", error);
       return;
     }
 
-    setBookmarks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, is_pinned: next } : b))
-    );
+    if (data) {
+      setBookmarks((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, is_pinned: data.is_pinned } : b
+        )
+      );
+    } else {
+      fetchBookmarks();
+    }
   };
 
   const toggleFavorite = async (id: string, next: boolean) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("bookmarks")
       .update({ is_favorite: next })
       .eq("id", id)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("id, is_favorite")
+      .single();
 
     if (error) {
       console.error("Failed to toggle favorite", error);
       return;
     }
 
-    setBookmarks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, is_favorite: next } : b))
-    );
+    if (data) {
+      setBookmarks((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, is_favorite: data.is_favorite } : b
+        )
+      );
+    } else {
+      fetchBookmarks();
+    }
   };
 
   useEffect(() => {
@@ -116,8 +134,17 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
     });
   }, [bookmarks, search, category, statusFilter]);
 
-  const pinned = filtered.filter((b) => b.is_pinned);
-  const others = filtered.filter((b) => !b.is_pinned);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const paged = filtered.slice(startIndex, startIndex + pageSize);
+
+  const pinned = paged.filter((b) => b.is_pinned);
+  const others = paged.filter((b) => !b.is_pinned);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, category, statusFilter, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -180,49 +207,118 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
         </button>
       </div>
 
-      {/* Pinned */}
-      {pinned.length > 0 && (
+      {/* Pagination Controls */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          Showing {filtered.length === 0 ? 0 : startIndex + 1}-
+          {Math.min(startIndex + pageSize, filtered.length)} of {filtered.length}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs"
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+          >
+            {[6, 8, 12, 16].map((size) => (
+              <option key={size} value={size}>
+                {size} / page
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+            className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          >
+            Prev
+          </button>
+          <span className="text-xs text-gray-600 dark:text-gray-300">
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+            className="px-3 py-1.5 rounded-xl text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {statusFilter === "all" ? (
+        <>
+          {/* Pinned */}
+          {pinned.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
+                📌 Pinned
+              </h3>
+              <div className="space-y-3">
+                {pinned.map((bookmark) => (
+                  <BookmarkItem
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    onTogglePinned={togglePinned}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={deleteBookmark}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Others */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
+              All Bookmarks
+            </h3>
+            {others.length === 0 ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                No bookmarks found.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {others.map((bookmark) => (
+                  <BookmarkItem
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    onTogglePinned={togglePinned}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={deleteBookmark}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
         <div>
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
-            📌 Pinned
+            {statusFilter === "pinned" ? "📌 Pinned" : "⭐ Favorites"}
           </h3>
-          <div className="space-y-3">
-            {pinned.map((bookmark) => (
-              <BookmarkItem
-                key={bookmark.id}
-                bookmark={bookmark}
-                onTogglePinned={togglePinned}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteBookmark}
-              />
-            ))}
-          </div>
+          {filtered.length === 0 ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              No bookmarks found.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((bookmark) => (
+                <BookmarkItem
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  onTogglePinned={togglePinned}
+                  onToggleFavorite={toggleFavorite}
+                  onDelete={deleteBookmark}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
-
-      {/* Others */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
-          All Bookmarks
-        </h3>
-        {others.length === 0 ? (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            No bookmarks found.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {others.map((bookmark) => (
-              <BookmarkItem
-                key={bookmark.id}
-                bookmark={bookmark}
-                onTogglePinned={togglePinned}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteBookmark}
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

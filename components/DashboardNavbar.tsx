@@ -29,12 +29,7 @@ export default function DashboardNavbar({
 
       <div className="flex items-center gap-6">
 
-        <button
-          onClick={() => dispatch(toggleTheme())}
-          className="px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-sm transition-colors hover:bg-gray-300 dark:hover:bg-gray-600"
-        >
-          {isDark ? "☀️ Light" : "🌙 Dark"}
-        </button>
+       
 
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">
