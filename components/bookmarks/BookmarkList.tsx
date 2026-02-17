@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase-client";
 import { Bookmark } from "@/types/bookmark";
+import BookmarkItem from "./BookmarkItem";
 
 interface BookmarkListProps {
   userId: string;
@@ -10,51 +11,159 @@ interface BookmarkListProps {
 
 export default function BookmarkList({ userId }: BookmarkListProps) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
 
   const fetchBookmarks = async () => {
     const { data } = await supabase
       .from("bookmarks")
       .select("*")
+      .eq("user_id", userId)
+      .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false });
 
-    if (data) setBookmarks(data);
+    if (data) setBookmarks(data as Bookmark[]);
   };
 
   const deleteBookmark = async (id: string) => {
-    await supabase.from("bookmarks").delete().eq("id", id);
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (!error) {
+      setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    }
+  };
+
+  const togglePinned = async (id: string, next: boolean) => {
+    const { error } = await supabase
+      .from("bookmarks")
+      .update({ is_pinned: next })
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (!error) {
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, is_pinned: next } : b))
+      );
+    }
+  };
+
+  const toggleFavorite = async (id: string, next: boolean) => {
+    const { error } = await supabase
+      .from("bookmarks")
+      .update({ is_favorite: next })
+      .eq("id", id)
+      .eq("user_id", userId);
+
+    if (!error) {
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, is_favorite: next } : b))
+      );
+    }
   };
 
   useEffect(() => {
     fetchBookmarks();
+    const handler = () => fetchBookmarks();
+    window.addEventListener("bookmarks:changed", handler);
+    return () => window.removeEventListener("bookmarks:changed", handler);
   }, []);
 
-  return (
-    <div className="space-y-3">
-      {bookmarks.map((bookmark) => (
-        <div
-          key={bookmark.id}
-          className="border p-3 flex justify-between items-center"
-        >
-          <div>
-            <p className="font-semibold">{bookmark.title}</p>
-            
-            <a
-              href={bookmark.url}
-              target="_blank"
-              className="text-blue-500 text-sm"
-            >
-              {bookmark.url}
-            </a>
-          </div>
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    bookmarks.forEach((b) => b.category && set.add(b.category));
+    return ["all", ...Array.from(set)];
+  }, [bookmarks]);
 
-          <button
-            onClick={() => deleteBookmark(bookmark.id)}
-            className="text-red-500"
-          >
-            Delete
-          </button>
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return bookmarks.filter((b) => {
+      const matchesTerm =
+        !term ||
+        b.title.toLowerCase().includes(term) ||
+        b.url.toLowerCase().includes(term) ||
+        (b.category || "").toLowerCase().includes(term);
+
+      const matchesCategory =
+        category === "all" || (b.category || "") === category;
+
+      return matchesTerm && matchesCategory;
+    });
+  }, [bookmarks, search, category]);
+
+  const pinned = filtered.filter((b) => b.is_pinned);
+  const others = filtered.filter((b) => !b.is_pinned);
+
+  return (
+    <div className="space-y-6">
+      {/* Search + Filter */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <input
+          placeholder="Search title, url, or category..."
+          className="flex-1 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <select
+          className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-sm"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c === "all" ? "All categories" : c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Pinned */}
+      {pinned.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
+            📌 Pinned
+          </h3>
+          <div className="space-y-3">
+            {pinned.map((bookmark) => (
+              <BookmarkItem
+                key={bookmark.id}
+                bookmark={bookmark}
+                onTogglePinned={togglePinned}
+                onToggleFavorite={toggleFavorite}
+                onDelete={deleteBookmark}
+              />
+            ))}
+          </div>
         </div>
-      ))}
+      )}
+
+      {/* Others */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">
+          All Bookmarks
+        </h3>
+        {others.length === 0 ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            No bookmarks found.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {others.map((bookmark) => (
+              <BookmarkItem
+                key={bookmark.id}
+                bookmark={bookmark}
+                onTogglePinned={togglePinned}
+                onToggleFavorite={toggleFavorite}
+                onDelete={deleteBookmark}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

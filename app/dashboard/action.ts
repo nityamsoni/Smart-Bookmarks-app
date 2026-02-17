@@ -27,6 +27,8 @@ export async function addBookmark(formData: FormData) {
     url,
     category,
     user_id: user.id,
+    is_favorite: false,
+    is_pinned: false,
   });
 
   revalidatePath("/dashboard");
