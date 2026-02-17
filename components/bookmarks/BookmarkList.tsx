@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase-client";
 import { Bookmark } from "@/types/bookmark";
 import BookmarkItem from "./BookmarkItem";
@@ -13,17 +13,25 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pinned" | "favorite"
+  >("all");
 
-  const fetchBookmarks = async () => {
-    const { data } = await supabase
+  const fetchBookmarks = useCallback(async () => {
+    const { data, error } = await supabase
       .from("bookmarks")
       .select("*")
       .eq("user_id", userId)
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false });
 
+    if (error) {
+      console.error("Failed to fetch bookmarks", error);
+      return;
+    }
+
     if (data) setBookmarks(data as Bookmark[]);
-  };
+  }, [userId]);
 
   const deleteBookmark = async (id: string) => {
     const { error } = await supabase
@@ -32,9 +40,12 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
       .eq("id", id)
       .eq("user_id", userId);
 
-    if (!error) {
-      setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    if (error) {
+      console.error("Failed to delete bookmark", error);
+      return;
     }
+
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
 
   const togglePinned = async (id: string, next: boolean) => {
@@ -44,11 +55,14 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
       .eq("id", id)
       .eq("user_id", userId);
 
-    if (!error) {
-      setBookmarks((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, is_pinned: next } : b))
-      );
+    if (error) {
+      console.error("Failed to toggle pinned", error);
+      return;
     }
+
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, is_pinned: next } : b))
+    );
   };
 
   const toggleFavorite = async (id: string, next: boolean) => {
@@ -58,11 +72,14 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
       .eq("id", id)
       .eq("user_id", userId);
 
-    if (!error) {
-      setBookmarks((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, is_favorite: next } : b))
-      );
+    if (error) {
+      console.error("Failed to toggle favorite", error);
+      return;
     }
+
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, is_favorite: next } : b))
+    );
   };
 
   useEffect(() => {
@@ -70,7 +87,7 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
     const handler = () => fetchBookmarks();
     window.addEventListener("bookmarks:changed", handler);
     return () => window.removeEventListener("bookmarks:changed", handler);
-  }, []);
+  }, [fetchBookmarks]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -90,9 +107,14 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
       const matchesCategory =
         category === "all" || (b.category || "") === category;
 
-      return matchesTerm && matchesCategory;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "pinned" && b.is_pinned) ||
+        (statusFilter === "favorite" && b.is_favorite);
+
+      return matchesTerm && matchesCategory && matchesStatus;
     });
-  }, [bookmarks, search, category]);
+  }, [bookmarks, search, category, statusFilter]);
 
   const pinned = filtered.filter((b) => b.is_pinned);
   const others = filtered.filter((b) => !b.is_pinned);
@@ -119,6 +141,43 @@ export default function BookmarkList({ userId }: BookmarkListProps) {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Status Filter */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setStatusFilter("all")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            statusFilter === "all"
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          }`}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("pinned")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            statusFilter === "pinned"
+              ? "bg-yellow-500 text-white"
+              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          }`}
+        >
+          Pinned
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("favorite")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            statusFilter === "favorite"
+              ? "bg-pink-600 text-white"
+              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          }`}
+        >
+          Favorites
+        </button>
       </div>
 
       {/* Pinned */}

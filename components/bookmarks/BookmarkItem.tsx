@@ -40,6 +40,7 @@ export default function BookmarkItem({
           <button
             aria-pressed={bookmark.is_pinned}
             onClick={() => onTogglePinned(bookmark.id, !bookmark.is_pinned)}
+            type="button"
             className={`px-2.5 py-2 rounded-xl text-xs font-medium transition-colors ${
               bookmark.is_pinned
                 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200"
@@ -52,6 +53,7 @@ export default function BookmarkItem({
           <button
             aria-pressed={bookmark.is_favorite}
             onClick={() => onToggleFavorite(bookmark.id, !bookmark.is_favorite)}
+            type="button"
             className={`px-2.5 py-2 rounded-xl text-xs font-medium transition-colors ${
               bookmark.is_favorite
                 ? "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-200"
@@ -63,6 +65,7 @@ export default function BookmarkItem({
 
           <button
             onClick={() => onDelete(bookmark.id)}
+            type="button"
             className="px-2.5 py-2 rounded-xl text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-200"
           >
             Delete
