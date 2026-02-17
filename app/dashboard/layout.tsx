@@ -19,6 +19,8 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const initial = user?.email ? user.email.charAt(0).toUpperCase() : "?";
+
   return (
     <ReduxProvider>
       <div className="min-h-screen bg-[#080b12] relative overflow-x-hidden">
@@ -40,7 +42,7 @@ export default async function DashboardLayout({
         />
 
         <div className="relative z-10">
-          <DashboardNavbar userEmail={user.email || ""} />
+          <DashboardNavbar userEmail={user.email || ""} initial={initial} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 pb-24">
             {children}
           </main>
