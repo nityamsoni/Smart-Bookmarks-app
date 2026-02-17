@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-client";
 import { Bookmark } from "@/types/bookmark";
 
-export default function BookmarkList({ userId }: { userId: string }) {
+interface BookmarkListProps {
+  userId: string;
+}
+
+export default function BookmarkList({ userId }: BookmarkListProps) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
 
   const fetchBookmarks = async () => {
@@ -33,6 +37,7 @@ export default function BookmarkList({ userId }: { userId: string }) {
         >
           <div>
             <p className="font-semibold">{bookmark.title}</p>
+            
             <a
               href={bookmark.url}
               target="_blank"

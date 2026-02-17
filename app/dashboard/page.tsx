@@ -1,42 +1,50 @@
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import BookmarkForm from "@/components/bookmarks/BookmarkForm";
 import BookmarkList from "@/components/bookmarks/BookmarkList";
 
 export default async function Dashboard() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
-    redirect("/login");
-  }
+  const { data: bookmarks } = await supabase
+    .from("bookmarks")
+    .select("*")
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false });
 
   return (
-    <div className="min-h-screen p-10 max-w-xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          Welcome {session.user.email}
-        </h1>
-
-        <form
-          action={async () => {
-            "use server";
-            const supabase = createSupabaseServerClient();
-            await supabase.auth.signOut();
-            redirect("/login");
-          }}
-        >
-          <button className="text-sm bg-red-500 text-white px-3 py-1 rounded">
-            Logout
-          </button>
-        </form>
+    <>
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-3xl p-10 shadow-lg mb-12">
+        <h2 className="text-3xl font-semibold mb-2">
+          Welcome back 👋
+        </h2>
+        <p className="text-white/90">
+          Manage your saved links with simplicity and power.
+        </p>
       </div>
 
-      <BookmarkForm userId={session.user.id} />
-      <BookmarkList userId={session.user.id} />
-    </div>
+      {/* Grid */}
+      <div className="grid md:grid-cols-2 gap-10">
+
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold mb-6">
+            Add Bookmark
+          </h3>
+          <BookmarkForm userId={user!.id} />
+        </div>
+
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold mb-6">
+            Your Bookmarks
+          </h3>
+          <BookmarkList userId={user!.id} />
+        </div>
+
+      </div>
+    </>
   );
 }

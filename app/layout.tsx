@@ -1,9 +1,9 @@
 import "./globals.css";
+import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 
-export const metadata = {
-  title: "Smart Bookmark App",
-  description: "Google OAuth + Supabase Realtime",
-};
+
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -12,8 +12,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 text-gray-900">
+      <body className={inter.className + " bg-gray-50"}>
         {children}
+          <Toaster position="top-right" richColors />
+
       </body>
     </html>
   );

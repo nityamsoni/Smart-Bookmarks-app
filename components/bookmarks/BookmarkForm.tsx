@@ -1,59 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase-client";
+import { addBookmark } from "@/app/dashboard/action";
+import { useRef } from "react";
 
-export default function BookmarkForm({ userId }: { userId: string }) {
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function BookmarkForm() {
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleAdd = async () => {
-    if (!title || !url) return;
-
-    setLoading(true);
-
-    const { error } = await supabase.from("bookmarks").insert([
-      {
-        title,
-        url,
-        user_id: userId,
-      },
-    ]);
-
-    setLoading(false);
-
-    if (!error) {
-      setTitle("");
-      setUrl("");
-    }
-  };
+  async function handleSubmit(formData: FormData) {
+    await addBookmark(formData);
+    formRef.current?.reset();
+  }
 
   return (
-    <div className="mb-6 space-y-3">
+    <form
+      ref={formRef}
+      action={handleSubmit}
+      className="space-y-4"
+    >
       <input
-        type="text"
+        name="title"
         placeholder="Title"
-        className="border p-2 w-full"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        required
+        className="border p-2 w-full rounded"
       />
 
       <input
-        type="text"
-        placeholder="URL"
-        className="border p-2 w-full"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        name="url"
+        placeholder="https://example.com"
+        required
+        className="border p-2 w-full rounded"
       />
 
-      <button
-        onClick={handleAdd}
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded"
-      >
-        {loading ? "Adding..." : "Add Bookmark"}
+      <input
+        name="category"
+        placeholder="Category (Optional)"
+        className="border p-2 w-full rounded"
+      />
+
+      <button className="bg-indigo-600 text-white px-4 py-2 rounded">
+        Add Bookmark
       </button>
-    </div>
+    </form>
   );
 }
