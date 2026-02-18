@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { useState } from "react";
 
-export default function DashboardNavbar({ userEmail }: { userEmail: string }) {
+export default function DashboardNavbar({ userEmail, initial }: { userEmail: string; initial: string }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -15,7 +15,6 @@ export default function DashboardNavbar({ userEmail }: { userEmail: string }) {
     router.refresh();
   }
 
-  const initial = userEmail?.charAt(0).toUpperCase() || "?";
 
   return (
     <header className="sticky top-0 z-50">
@@ -53,12 +52,18 @@ export default function DashboardNavbar({ userEmail }: { userEmail: string }) {
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-sm" />
-              <div className="relative w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] font-bold text-white shadow-sm">
+              <div
+                className="relative w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
+                suppressHydrationWarning
+              >
                 {initial}
               </div>
             </div>
             {/* Email — hide on small screens */}
-            <span className="text-xs text-white/35 hidden md:block max-w-[180px] truncate">
+            <span
+              className="text-xs text-white/35 hidden md:block max-w-[180px] truncate"
+              suppressHydrationWarning
+            >
               {userEmail}
             </span>
           </div>
