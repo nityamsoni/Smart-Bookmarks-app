@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Use this in Server Components (read-only cookies)
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
@@ -13,14 +12,20 @@ export async function createSupabaseServerClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        // NO-OP in Server Components
-        setAll() {},
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch (error) {
+            // Silently fail in read-only contexts
+          }
+        },
       },
     }
   );
 }
 
-// Use this in Route Handlers or Server Actions (mutable cookies)
 export async function createSupabaseRouteHandlerClient() {
   const cookieStore = await cookies();
 
@@ -33,9 +38,9 @@ export async function createSupabaseRouteHandlerClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }

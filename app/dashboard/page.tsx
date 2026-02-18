@@ -1,10 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
 import BookmarkForm from "@/components/bookmarks/BookmarkForm";
 import BookmarkList from "@/components/bookmarks/BookmarkList";
 
 export default async function Dashboard() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Redirect if not authenticated
+  if (!user) {
+    redirect("/auth");
+  }
 
   const { data: bookmarks } = await supabase
     .from("bookmarks")
@@ -15,7 +21,7 @@ export default async function Dashboard() {
   const total = bookmarks?.length || 0;
   const favorites = bookmarks?.filter((b) => b.is_favorite).length || 0;
   const pinned = bookmarks?.filter((b) => b.is_pinned).length || 0;
-  const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
+  const firstName = user.user_metadata?.full_name?.split(" ")[0] || "there";
 
   return (
     <div className="space-y-6">
@@ -89,8 +95,7 @@ export default async function Dashboard() {
         {/* Add bookmark panel */}
         <div className="sticky top-6 space-y-4">
           <DarkPanel label="Add Bookmark" icon="+" accentColor="indigo">
-            { /* @ts-ignore s*/}
-            <BookmarkForm userId={user!.id} />
+            <BookmarkForm userId={user.id} />
           </DarkPanel>
 
           {/* Tip card */}

@@ -1,9 +1,10 @@
 "use client";
 
 import { addBookmark } from "@/app/dashboard/action";
+import { signInUser, signUpUser } from "@/app/actions/auth";
 import { useRef, useState } from "react";
 
-export default function BookmarkForm() {
+export default function BookmarkForm({ userId }: { userId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
